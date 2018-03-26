@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:int="http://www.springframework.org/schema/integration"
+  xmlns:int-http="http://www.springframework.org/schema/integration/http"
+  xmlns:util="http://www.springframework.org/schema/util"
+  xsi:schemaLocation="
+   http://www.springframework.org/schema/beans
+   http://www.springframework.org/schema/beans/spring-beans.xsd
+   http://www.springframework.org/schema/integration
+   http://www.springframework.org/schema/integration/spring-integration-4.3.xsd
+   http://www.springframework.org/schema/integration/http
+   http://www.springframework.org/schema/integration/http/spring-integration-http-4.3.xsd
+   http://www.springframework.org/schema/util
+   http://www.springframework.org/schema/util/spring-util.xsd">
+   
+   <int:gateway id="requestGateway" 
+	             service-interface="com.magg.RequestGateway"
+	             default-request-channel="requestChannel"/>
+
+	<int:channel id="requestChannel"/>
+
+	<bean id="routingHeaderTransformer" class="com.magg.RoutingHeaderTransformer"></bean>
+
+	<int:chain input-channel="requestChannel">
+		<int:transformer ref="routingHeaderTransformer"></int:transformer>
+		<int:header-value-router header-name="toggle">
+			<int:mapping value="true" channel="httpRequestChannel-hu" />
+    		<int:mapping value="false" channel="httpRequestChannel-sk" />			
+		</int:header-value-router>
+	</int:chain>
+
+	<int:channel id="httpRequestChannel-hu" />
+	<int-http:outbound-gateway request-channel="httpRequestChannel-hu" 
+	    url="http://localhost:3000"
+	    http-method="GET"
+	    expected-response-type="com.magg.Result" 
+	    message-converters="messageConverters"
+	/>
+
+	<util:list id="messageConverters" value-type="org.springframework.http.converter.HttpMessageConverter">
+		<bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter" />
+	</util:list>
+
+	<int:channel id="httpRequestChannel-sk" />
+	<int-http:outbound-gateway request-channel="httpRequestChannel-sk"
+	    url="http://localhost:3001"
+	    http-method="GET"
+	    expected-response-type="com.magg.Result"
+	    message-converters="messageConverters"
+	/>
+		
+</beans>
